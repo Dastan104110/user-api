@@ -9,36 +9,40 @@ import (
 	"user-api/models"
 )
 
-// GetUsers - Получение списка пользователей с фильтрацией и сортировкой
+// GetUsers godoc
+// @Summary Get all users
+// @Description Get all users with optional filtering by age and sorting by name.
+// @Tags users
+// @Accept json
+// @Produce json
+// @Success 200 {array} models.User
+// @Failure 500 {object} gin.H
+// @Router /users [get]
 func GetUsers(c *gin.Context) {
 	var users []models.User
-	db := c.MustGet("db").(*gorm.DB) // Получаем подключение к базе данных
+	db := c.MustGet("db").(*gorm.DB)
 
-	// Параметры фильтрации
 	ageStr := c.Query("age")
 	var age int
 	if ageStr != "" {
-		age, _ = strconv.Atoi(ageStr) // Конвертируем строковый параметр в число
+		age, _ = strconv.Atoi(ageStr)
 	}
 
-	// Параметры сортировки
 	sort := c.Query("sort")
 	if sort == "" {
-		sort = "name" // По умолчанию сортируем по имени
+		sort = "name"
 	}
 
-	// Параметры пагинации
 	page, _ := strconv.Atoi(c.Query("page"))
 	limit, _ := strconv.Atoi(c.Query("limit"))
 	if limit == 0 {
-		limit = 10 // Значение по умолчанию
+		limit = 10
 	}
-	offset := (page - 1) * limit // Вычисляем смещение
+	offset := (page - 1) * limit
 
-	// Запрос к базе данных с фильтрацией и сортировкой
 	query := db.Offset(offset).Limit(limit).Order(sort)
 
-	if age > 0 { // Если передан параметр возраста
+	if age > 0 {
 		query = query.Where("age = ?", age)
 	}
 
@@ -47,13 +51,23 @@ func GetUsers(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, users) // Возвращаем список пользователей
+	c.JSON(http.StatusOK, users)
 }
 
-// CreateUser - Создание нового пользователя
+// CreateUser godoc
+// @Summary Create a new user
+// @Description Create a new user with unique name and age.
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param user body models.User true "User to create"
+// @Success 201 {object} models.User
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /users [post]
 func CreateUser(c *gin.Context) {
 	var user models.User
-	db := c.MustGet("db").(*gorm.DB) // Получаем подключение к базе данных
+	db := c.MustGet("db").(*gorm.DB)
 
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -65,14 +79,25 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, user) // Возврат созданного пользователя
+	c.JSON(http.StatusCreated, user)
 }
 
-// UpdateUser - Обновление существующего пользователя
+// UpdateUser godoc
+// @Summary Update an existing user by ID
+// @Description Update a user's name and age by their ID. The name must be unique.
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Param user body models.User true "User to update"
+// @Success 200 {object} models.User
+// @Failure 400 {object} gin.H
+// @Failure 404 {object} gin.H
+// @Router /users/{id} [put]
 func UpdateUser(c *gin.Context) {
 	var user models.User
-	id := c.Param("id")              // Получение ID пользователя
-	db := c.MustGet("db").(*gorm.DB) // Получаем подключение к базе данных
+	id := c.Param("id")
+	db := c.MustGet("db").(*gorm.DB)
 
 	if err := db.First(&user, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Пользователь не найден"})
@@ -84,19 +109,26 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	db.Save(&user)              // Обновление пользователя
-	c.JSON(http.StatusOK, user) // Возврат обновлённого пользователя
+	db.Save(&user)
+	c.JSON(http.StatusOK, user)
 }
 
-// DeleteUser - Удаление пользователя
+// DeleteUser godoc
+// @Summary Delete a user by ID
+// @Description Delete a user by their ID.
+// @Tags users
+// @Param id path int true "User ID"
+// @Success 204 {object} nil
+// @Failure 404 {object} gin.H
+// @Router /users/{id} [delete]
 func DeleteUser(c *gin.Context) {
-	id := c.Param("id")              // Получение ID пользователя
-	db := c.MustGet("db").(*gorm.DB) // Получаем подключение к базе данных
+	id := c.Param("id")
+	db := c.MustGet("db").(*gorm.DB)
 
 	if err := db.Delete(&models.User{}, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Пользователь не найден"})
 		return
 	}
 
-	c.JSON(http.StatusNoContent, nil) // Успешное удаление
+	c.JSON(http.StatusNoContent, nil)
 }
